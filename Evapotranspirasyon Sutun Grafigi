@@ -1,0 +1,118 @@
+import os
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Matplotlib Türkçe font ve eksi işareti ayarları
+if "font.enable_last_resort" in mpl.rcParams:
+  mpl.rcParams["font.enable_last_resort"] = False
+
+mpl.rcParams["font.sans-serif"] = [
+    "Segoe UI",
+    "Arial",
+    "DejaVu Sans",
+    "Calibri",
+]
+mpl.rcParams["font.family"] = "sans-serif"
+mpl.rcParams["axes.unicode_minus"] = False
+
+# Dosya Yolunu Belirleme
+user_home = os.path.expanduser("~")
+file_name = "HE10_ERA5Land_Aylik_1981_2025.csv"
+
+file_path = file_name
+if not os.path.exists(file_path):
+  file_path = os.path.join(user_home, "Downloads", file_name)
+
+# Veriyi Okuma
+df_era5 = pd.read_csv(file_path)
+
+# Evapotranspirasyon / Buharlaşma sütununu tespit etme
+e_col = [
+    c
+    for c in df_era5.columns
+    if any(k in c.lower() for k in ["evap", "et", "buhar"])
+][0]
+
+# Eğer negatif değerler içeriyorsa mutlak değere çevir
+if (df_era5[e_col] < 0).any():
+  df_era5[e_col] = df_era5[e_col].abs()
+
+# Uzun Yıllar Aylık Ortalama Hesaplama (1981-2025)
+e_clim = df_era5.groupby("Ay")[e_col].mean().reset_index()
+
+aylar = [
+    "Ocak",
+    "Şubat",
+    "Mart",
+    "Nisan",
+    "Mayıs",
+    "Haziran",
+    "Temmuz",
+    "Ağustos",
+    "Eylül",
+    "Ekim",
+    "Kasım",
+    "Aralık",
+]
+e_clim["Ay_Adi"] = aylar
+
+# Sütun Grafiği Çizdirme
+fig, ax = plt.subplots(figsize=(10, 5.5), dpi=300)
+
+bars = ax.bar(
+    e_clim["Ay_Adi"],
+    e_clim[e_col],
+    color="#e67e22",
+    edgecolor="#d35400",
+    alpha=0.85,
+    width=0.6,
+    label="Aylık Ortalama Evapotranspirasyon ($E$)",
+)
+
+# Sütun Üzeri Değer Etiketleri
+for bar in bars:
+  yval = bar.get_height()
+  ax.annotate(
+      f"{yval:.2f}",
+      xy=(bar.get_x() + bar.get_width() / 2, yval),
+      xytext=(0, 5),
+      textcoords="offset points",
+      ha="center",
+      va="bottom",
+      fontsize=9,
+      fontweight="bold",
+      color="#333333",
+  )
+
+ax.set_title(
+    "Orlovac HES Memba Havzası Aylık Ortalama Evapotranspirasyon (E)"
+    " Klimatolojisi (1981–2025)",
+    fontsize=12,
+    fontweight="bold",
+    pad=15,
+    color="#1f4e78",
+)
+ax.set_xlabel("Aylar", fontsize=11, fontweight="bold", labelpad=10)
+ax.set_ylabel(
+    "Evapotranspirasyon E (mm/ay)", fontsize=11, fontweight="bold", labelpad=10
+)
+
+ax.grid(True, axis="y", linestyle="--", alpha=0.5, zorder=0)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+ax.legend(
+    loc="upper right",
+    frameon=True,
+    facecolor="white",
+    framealpha=0.9,
+    fontsize=9.5,
+)
+
+plt.ylim(0, max(e_clim[e_col]) * 1.2)
+plt.tight_layout()
+
+# Kaydetme ve Gösterme
+plt.savefig("Evapotranspirasyon_E_Sutun_Grafik.png", bbox_inches="tight", dpi=300)
+plt.show()
