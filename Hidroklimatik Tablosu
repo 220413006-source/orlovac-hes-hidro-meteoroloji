@@ -1,0 +1,134 @@
+import os
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# ==============================================================================
+# 0. FONT VE SİSTEM AYARLARI
+# ==============================================================================
+if "font.enable_last_resort" in mpl.rcParams:
+  mpl.rcParams["font.enable_last_resort"] = False
+
+mpl.rcParams["font.sans-serif"] = [
+    "Segoe UI",
+    "Arial",
+    "DejaVu Sans",
+    "Calibri",
+]
+mpl.rcParams["font.family"] = "sans-serif"
+mpl.rcParams["axes.unicode_minus"] = False
+
+# ==============================================================================
+# 1. DOSYA YOLLARININ BELİRLENMESİ VE OKUNMASI
+# ==============================================================================
+user_home = os.path.expanduser("~")
+era5_path = os.path.join(
+    user_home, "Downloads", "HE10_ERA5Land_Aylik_1981_2025.csv"
+)
+glofas_path = os.path.join(
+    user_home, "Downloads", "HE10_GloFAS_Aylik_1981_2025.csv"
+)
+
+df_era5 = pd.read_csv(era5_path)
+df_glofas = pd.read_csv(glofas_path)
+
+# ==============================================================================
+# 2. VERİLERİN BİRLEŞTİRİLMESİ VE KLİMATOLOJİ HESABI
+# ==============================================================================
+df = pd.merge(df_era5, df_glofas, on="Tarih")
+
+climatology = (
+    df.groupby("Ay")
+    .agg({
+        "Yagis_mm_ay": "mean",
+        "Sicaklik_C": "mean",
+        "Evaporasyon_mm_ay": "mean",
+        "Ortalama_Modellenmis_Nehir_Debisi_m3s": "mean",
+    })
+    .reset_index()
+)
+
+ay_isimleri = [
+    "Ocak",
+    "Şubat",
+    "Mart",
+    "Nisan",
+    "Mayıs",
+    "Haziran",
+    "Temmuz",
+    "Ağustos",
+    "Eylül",
+    "Ekim",
+    "Kasım",
+    "Aralık",
+]
+climatology["Ay_Adi"] = ay_isimleri
+
+# ==============================================================================
+# 3. TABLO VERİSİNİN HAZIRLANMASI ("Ay No" Sütunsuz ve Toplamsız)
+# ==============================================================================
+headers = [
+    "Takvim Ayı",
+    "Yağış P\n(mm/ay)",
+    "2 m Sıcaklık T\n(°C)",
+    "Evaporasyon Ev\n(mm/ay)",
+    "Modellenmiş Debi Q\n(m³/s)",
+]
+
+table_data = []
+for idx, row in climatology.iterrows():
+  table_data.append([
+      row["Ay_Adi"],
+      f"{row['Yagis_mm_ay']:.2f}",
+      f"{row['Sicaklik_C']:.2f}",
+      f"{row['Evaporasyon_mm_ay']:.2f}",
+      f"{row['Ortalama_Modellenmis_Nehir_Debisi_m3s']:.2f}",
+  ])
+
+# ==============================================================================
+# 4. TABLO ÇİZİMİ VE GÖRSEL OLUŞTURMA
+# ==============================================================================
+fig, ax = plt.subplots(figsize=(9, 6), dpi=300)
+
+ax.axis("off")
+ax.xaxis.set_visible(False)
+ax.yaxis.set_visible(False)
+
+table = ax.table(
+    cellText=table_data, colLabels=headers, loc="center", cellLoc="center"
+)
+table.auto_set_font_size(False)
+table.set_fontsize(10)
+table.scale(1.2, 1.8)
+
+# Renklendirme stili
+header_color = "#1f4e78"
+row_even = "#f2f4f7"
+row_odd = "#ffffff"
+
+for (r, c), cell in table.get_celld().items():
+  if r == 0:
+    cell.set_facecolor(header_color)
+    cell.set_text_props(color="white", weight="bold")
+    cell.set_height(0.08)
+  else:
+    cell.set_facecolor(row_even if r % 2 == 0 else row_odd)
+  cell.set_edgecolor("#d0d0d0")
+
+plt.title(
+    "Orlovac HES Memba Havzası 12-Aylık Hidroklimatik Klimatoloji Tablosu"
+    " (1981–2025)",
+    fontsize=12,
+    fontweight="bold",
+    pad=20,
+    color="#1f4e78",
+)
+
+# ==============================================================================
+# 5. GÖRSELİ KAYDETME VE GÖSTERME
+# ==============================================================================
+output_filename = "Klimatoloji_Tablo_Gorseli_Sade.png"
+plt.savefig(output_filename, bbox_inches="tight", dpi=300)
+plt.show()
+
+print(f"[BAŞARILI] Güncellenmiş tablo kaydedildi: '{output_filename}'")
