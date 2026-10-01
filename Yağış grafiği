@@ -1,0 +1,132 @@
+import os
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+import pandas as pd
+
+# ==============================================================================
+# 0. FONT VE SİSTEM AYARLARI
+# ==============================================================================
+if "font.enable_last_resort" in mpl.rcParams:
+  mpl.rcParams["font.enable_last_resort"] = False
+
+mpl.rcParams["font.sans-serif"] = [
+    "Segoe UI",
+    "Arial",
+    "DejaVu Sans",
+    "Calibri",
+]
+mpl.rcParams["font.family"] = "sans-serif"
+mpl.rcParams["axes.unicode_minus"] = False
+
+# ==============================================================================
+# 1. DOSYA YOLLARININ TAM OLARAK TANIMLANMASI (Downloads Klasörü)
+# ==============================================================================
+user_home = os.path.expanduser("~")
+era5_path = os.path.join(
+    user_home, "Downloads", "HE10_ERA5Land_Aylik_1981_2025.csv"
+)
+
+# Verinin okunması ve ortalamaların hesabı
+df_era5 = pd.read_csv(era5_path)
+p_clim = df_era5.groupby("Ay")["Yagis_mm_ay"].mean().reset_index()
+
+aylar = [
+    "Ocak",
+    "Şubat",
+    "Mart",
+    "Nisan",
+    "Mayıs",
+    "Haziran",
+    "Temmuz",
+    "Ağustos",
+    "Eylül",
+    "Ekim",
+    "Kasım",
+    "Aralık",
+]
+p_clim["Ay_Adi"] = aylar
+
+max_p_row = p_clim.loc[p_clim["Yagis_mm_ay"].idxmax()]
+min_p_row = p_clim.loc[p_clim["Yagis_mm_ay"].idxmin()]
+
+# ==============================================================================
+# 2. ÇİZİM
+# ==============================================================================
+fig, ax = plt.subplots(figsize=(10, 5.5), dpi=300)
+
+colors = [
+    "#1f77b4"
+    if (row["Ay"] != max_p_row["Ay"] and row["Ay"] != min_p_row["Ay"])
+    else ("#2ca02c" if row["Ay"] == max_p_row["Ay"] else "#d62728")
+    for _, row in p_clim.iterrows()
+]
+
+bars = ax.bar(
+    p_clim["Ay_Adi"],
+    p_clim["Yagis_mm_ay"],
+    color=colors,
+    width=0.6,
+    edgecolor="black",
+    linewidth=0.8,
+    alpha=0.85,
+)
+
+# Sütun üstü değer etiketleri
+for bar in bars:
+  height = bar.get_height()
+  ax.annotate(
+      f"{height:.1f}",
+      xy=(bar.get_x() + bar.get_width() / 2, height),
+      xytext=(0, 4),
+      textcoords="offset points",
+      ha="center",
+      va="bottom",
+      fontsize=9,
+      fontweight="bold",
+      color="#333333",
+  )
+
+ax.set_title(
+    "Orlovac HES Memba Havzası Aylık Ortalama Yağış (P) Klimatolojisi (1981–2025)",
+    fontsize=12,
+    fontweight="bold",
+    pad=15,
+    color="#1f4e78",
+)
+ax.set_xlabel("Aylar", fontsize=11, fontweight="bold", labelpad=10)
+ax.set_ylabel("Yağış P (mm/ay)", fontsize=11, fontweight="bold", labelpad=10)
+
+ax.grid(axis="y", linestyle="--", alpha=0.5, zorder=0)
+ax.set_axisbelow(True)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+# Lejant elemanları (Sol üste yerleştirildi)
+legend_elements = [
+    Patch(facecolor="#1f77b4", edgecolor="black", label="Aylık Ortalama Yağış"),
+    Patch(
+        facecolor="#2ca02c",
+        edgecolor="black",
+        label=f"Maksimum ({max_p_row['Ay_Adi']}: {max_p_row['Yagis_mm_ay']:.2f} mm)",
+    ),
+    Patch(
+        facecolor="#d62728",
+        edgecolor="black",
+        label=f"Minimum ({min_p_row['Ay_Adi']}: {min_p_row['Yagis_mm_ay']:.2f} mm)",
+    ),
+]
+ax.legend(
+    handles=legend_elements,
+    loc="upper left",
+    frameon=True,
+    facecolor="white",
+    framealpha=0.9,
+    fontsize=9.5,
+)
+
+plt.ylim(0, max(p_clim["Yagis_mm_ay"]) * 1.28)
+plt.tight_layout()
+
+plt.savefig("Yagis_P_Klimatoloji_Grafik.png", bbox_inches="tight", dpi=300)
+plt.show()
