@@ -1,0 +1,135 @@
+import os
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Matplotlib Türkçe font ve eksi işareti ayarları
+if "font.enable_last_resort" in mpl.rcParams:
+  mpl.rcParams["font.enable_last_resort"] = False
+
+mpl.rcParams["font.sans-serif"] = [
+    "Segoe UI",
+    "Arial",
+    "DejaVu Sans",
+    "Calibri",
+]
+mpl.rcParams["font.family"] = "sans-serif"
+mpl.rcParams["axes.unicode_minus"] = False
+
+# Dosya Yolunu Belirleme
+user_home = os.path.expanduser("~")
+file_name = "HE10_GloFAS_Gunluk_1981_2025.csv"
+
+file_path = file_name
+if not os.path.exists(file_path):
+  file_path = os.path.join(user_home, "Downloads", file_name)
+
+# Veriyi Okuma
+df_glofas = pd.read_csv(file_path)
+
+# Tarih sütununu datetime tipine dönüştürüp Ay verisini çekme
+df_glofas["Tarih"] = pd.to_datetime(df_glofas["Tarih"])
+df_glofas["Ay"] = df_glofas["Tarih"].dt.month
+
+debi_col = "Modellenmis_Nehir_Debisi_m3s"
+
+# Uzun Yıllar Aylık Ortalama Hesaplama (1981-2025)
+q_clim = df_glofas.groupby("Ay")[debi_col].mean().reset_index()
+
+aylar = [
+    "Ocak",
+    "Şubat",
+    "Mart",
+    "Nisan",
+    "Mayıs",
+    "Haziran",
+    "Temmuz",
+    "Ağustos",
+    "Eylül",
+    "Ekim",
+    "Kasım",
+    "Aralık",
+]
+q_clim["Ay_Adi"] = aylar
+
+# Max ve Min Satırlarını Bulma
+max_q_row = q_clim.loc[q_clim[debi_col].idxmax()]
+min_q_row = q_clim.loc[q_clim[debi_col].idxmin()]
+
+# Grafiği Çizdirme
+fig, ax = plt.subplots(figsize=(10, 5.5), dpi=300)
+
+ax.plot(
+    q_clim["Ay_Adi"],
+    q_clim[debi_col],
+    color="#0275d8",
+    marker="o",
+    linewidth=2.5,
+    markersize=8,
+    label="GloFAS Aylık Ortalama Debi ($Q$)",
+)
+
+# Maksimum ve Minimum Vurguları
+ax.scatter(
+    max_q_row["Ay_Adi"],
+    max_q_row[debi_col],
+    color="#2ca02c",
+    s=140,
+    zorder=5,
+    label=(
+        f"Maksimum ({max_q_row['Ay_Adi']}: {max_q_row[debi_col]:.2f} m³/s)"
+    ),
+)
+ax.scatter(
+    min_q_row["Ay_Adi"],
+    min_q_row[debi_col],
+    color="#d9534f",
+    s=140,
+    zorder=5,
+    label=f"Minimum ({min_q_row['Ay_Adi']}: {min_q_row[debi_col]:.2f} m³/s)",
+)
+
+# Nokta Üzeri Değer Etiketleri
+for _, row in q_clim.iterrows():
+  val = row[debi_col]
+  ax.annotate(
+      f"{val:.2f}",
+      xy=(row["Ay_Adi"], val),
+      xytext=(0, 10),
+      textcoords="offset points",
+      ha="center",
+      va="bottom",
+      fontsize=9,
+      fontweight="bold",
+      color="#333333",
+  )
+
+ax.set_title(
+    "Orlovac HES Memba Havzası GloFAS Aylık Ortalama Debi (Q) Klimatolojisi"
+    " (1981–2025)",
+    fontsize=12,
+    fontweight="bold",
+    pad=15,
+    color="#1f4e78",
+)
+ax.set_xlabel("Aylar", fontsize=11, fontweight="bold", labelpad=10)
+ax.set_ylabel("Debi Q (m³/s)", fontsize=11, fontweight="bold", labelpad=10)
+
+ax.grid(True, linestyle="--", alpha=0.5, zorder=0)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+ax.legend(
+    loc="upper right",
+    frameon=True,
+    facecolor="white",
+    framealpha=0.9,
+    fontsize=9.5,
+)
+
+plt.ylim(0, max(q_clim[debi_col]) * 1.25)
+plt.tight_layout()
+
+# Kaydetme ve Gösterme
+plt.savefig("GloFAS_Orlovac_Debi_Klimatolojisi.png", bbox_inches="tight", dpi=300)
+plt.show()
