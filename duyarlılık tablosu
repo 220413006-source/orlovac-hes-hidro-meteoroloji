@@ -1,0 +1,100 @@
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+# 1. Windows / Anaconda Matplotlib Font Hatalarını Önleme Ayarları
+if "font.enable_last_resort" in mpl.rcParams:
+  mpl.rcParams["font.enable_last_resort"] = False
+
+mpl.rcParams["font.sans-serif"] = [
+    "Segoe UI",
+    "Arial",
+    "DejaVu Sans",
+    "Calibri",
+]
+mpl.rcParams["font.family"] = "sans-serif"
+mpl.rcParams["mathtext.fontset"] = "cm"  # Dahili matematik font seti (Çökmez)
+
+# 2. Tablo Başlıkları ve Verileri
+headers = [
+    "Senaryo / Değişken",
+    r"Debi $\bar{Q}$ ($m^3/s$)",
+    "Düşü H (m)",
+    r"Verim $\eta$",
+    "Güç P (MW)",
+    "Değişim (%)",
+]
+
+data = [
+    ["Temel Senaryo", "90.80", "45.00", "0.90", "36.07", "%0.0"],
+    [
+        r"Debi $-10\%$ ($0.90 \cdot \bar{Q}$)",
+        "81.72",
+        "45.00",
+        "0.90",
+        "32.47",
+        "-%10.0",
+    ],
+    [
+        r"Debi $+10\%$ ($1.10 \cdot \bar{Q}$)",
+        "99.88",
+        "45.00",
+        "0.90",
+        "39.68",
+        "+%10.0",
+    ],
+    [r"Düşü $-10\%$ ($0.90 \cdot H$)", "90.80", "40.50", "0.90", "32.47", "-%10.0"],
+    [r"Düşü $+10\%$ ($1.10 \cdot H$)", "90.80", "49.50", "0.90", "39.68", "+%10.0"],
+]
+
+# 3. Çizim Alanı
+fig, ax = plt.subplots(figsize=(9.2, 3.2), dpi=300)
+ax.axis("off")
+
+# Sütun Genişlikleri
+col_widths = [0.28, 0.16, 0.14, 0.12, 0.16, 0.14]
+
+table = ax.table(
+    cellText=data,
+    colLabels=headers,
+    colWidths=col_widths,
+    loc="center",
+    cellLoc="center",
+)
+
+table.auto_set_font_size(False)
+table.set_fontsize(10.0)
+table.scale(1.0, 1.8)
+
+# 4. Tablo Biçimlendirmesi
+for (row, col), cell in table.get_celld().items():
+  cell.set_edgecolor("#d1d5db")
+  cell.set_linewidth(1.0)
+
+  if row == 0:
+    cell.set_facecolor("#1f4e78")
+    cell.get_text().set_color("white")
+    cell.get_text().set_weight("bold")
+    cell.get_text().set_fontsize(10.5)
+  else:
+    if row % 2 == 0:
+      cell.set_facecolor("#f8fafc")
+    else:
+      cell.set_facecolor("#ffffff")
+
+    cell.get_text().set_weight("normal")
+    cell.get_text().set_fontsize(9.5)
+    cell.get_text().set_color("#1e293b")
+
+plt.title(
+    "Salakovac HES - Duyarlılık Analizi Sonuçları (±%10 Senaryoları)",
+    fontsize=12,
+    fontweight="bold",
+    pad=14,
+    color="#1f4e78",
+)
+
+plt.tight_layout()
+plt.savefig(
+    "Salakovac_Duyarlilik_Analizi_Tablosu.png", bbox_inches="tight", dpi=300
+)
+plt.show()
